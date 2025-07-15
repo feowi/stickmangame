@@ -1,0 +1,135 @@
+* {
+    margin: 0; padding: 0; box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+body, html {
+    height: 100%;
+    background: linear-gradient(135deg, #141e30, #243b55);
+    color: white;
+}
+#game-container {
+    position: relative;
+    width: 960px;
+    margin: 20px auto;
+    background-color: #222;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 0 20px #111;
+}
+canvas#gameCanvas {
+    display: block;
+    background-color: #7ec8e3; /* lichte lucht achtergrond */
+    width: 960px;
+    height: 540px;
+}
+#ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+}
+.player-ui {
+    width: 200px;
+}
+.health-bar-bg {
+    width: 100%;
+    height: 20px;
+    background-color: #444;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+.health-bar {
+    height: 100%;
+    background-color: #4caf50;
+    width: 100%;
+    transition: width 0.3s ease-out;
+}
+.combo {
+    font-size: 14px;
+    text-align: center;
+    user-select: none;
+    color: #ffd700;
+    text-shadow: 0 0 6px #ffbf00;
+}
+#message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0,0,0,0.7);
+    padding: 20px 40px;
+    border-radius: 10px;
+    font-size: 24px;
+    font-weight: bold;
+    user-select: none;
+}
+.hidden {
+    display: none;
+}
+#story-mode, #leaderboard {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #222;
+    padding: 20px;
+    border-radius: 10px;
+    width: 80%;
+    max-width: 400px;
+    box-shadow: 0 0 15px #000;
+    z-index: 100;
+}
+#story-mode h2, #leaderboard h2 {
+    margin-bottom: 15px;
+}
+#menu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #111;
+    padding: 30px 40px;
+    border-radius: 15px;
+    box-shadow: 0 0 25px #00aaff;
+    text-align: center;
+}
+#menu h1 {
+    margin-bottom: 20px;
+    font-size: 2.2rem;
+    color: #00ccff;
+    text-shadow: 0 0 10px #00ccff;
+}
+#menu button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    background-color: #0077aa;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+#menu button:hover {
+    background-color: #0099ff;
+}
+.character-btn {
+    background-color: #444;
+    margin: 5px;
+    padding: 8px 15px;
+}
+.character-btn.selected {
+    background-color: #00ccff;
+}
+#leaderboard-list {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-left: 20px;
+}
+#leaderboard-list li {
+    margin: 5px 0;
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stickman Fighting Game</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="960" height="540"></canvas>
+        <div id="ui">
+            <div id="player1-ui" class="player-ui">
+                <div class="health-bar-bg">
+                    <div id="player1-health" class="health-bar"></div>
+                </div>
+                <div id="player1-combo" class="combo">Combo: 0</div>
+            </div>
+            <div id="player2-ui" class="player-ui">
+                <div class="health-bar-bg">
+                    <div id="player2-health" class="health-bar"></div>
+                </div>
+                <div id="player2-combo" class="combo">Combo: 0</div>
+            </div>
+        </div>
+        <div id="message" class="hidden"></div>
+        <div id="story-mode" class="hidden">
+            <h2>Story Mode</h2>
+            <button id="start-story-btn">Start Story Mode</button>
+            <button id="exit-story-btn" class="hidden">Exit Story Mode</button>
+            <p id="story-text"></p>
+        </div>
+        <div id="leaderboard" class="hidden">
+            <h2>Leaderboards</h2>
+            <ol id="leaderboard-list"></ol>
+            <button id="clear-leaderboard-btn">Clear Leaderboard</button>
+            <button id="close-leaderboard-btn">Close</button>
+        </div>
+        <div id="menu">
+            <h1>Stickman Fighting Game</h1>
+            <div id="character-selection">
+                <p>Kies je karakter:</p>
+                <button class="character-btn" data-character="stickman1">Stickman 1</button>
+                <button class="character-btn" data-character="stickman2">Stickman 2</button>
+            </div>
+            <button id="start-game-btn">Start Game</button>
+            <button id="story-mode-btn">Story Mode</button>
+            <button id="leaderboard-btn">Leaderboards</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>

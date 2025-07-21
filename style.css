@@ -1,135 +1,182 @@
-* {
-    margin: 0; padding: 0; box-sizing: border-box;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
+/* Pixel font */
 body, html {
-    height: 100%;
+    font-family: 'Press Start 2P', cursive;
     background: linear-gradient(135deg, #141e30, #243b55);
-    color: white;
-}
-#game-container {
-    position: relative;
-    width: 960px;
-    margin: 20px auto;
-    background-color: #222;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 0 20px #111;
-}
-canvas#gameCanvas {
-    display: block;
-    background-color: #7ec8e3; /* lichte lucht achtergrond */
-    width: 960px;
-    height: 540px;
-}
-#ui {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    display: flex;
-    justify-content: space-between;
-    pointer-events: none;
-}
-.player-ui {
-    width: 200px;
-}
-.health-bar-bg {
-    width: 100%;
-    height: 20px;
-    background-color: #444;
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 5px;
-}
-.health-bar {
+    color: #00ffea;
     height: 100%;
-    background-color: #4caf50;
-    width: 100%;
-    transition: width 0.3s ease-out;
+    margin: 0; padding: 0;
 }
-.combo {
-    font-size: 14px;
+
+/* Glitch effect voor menu titel */
+.glitch {
+  position: relative;
+  color: #00ffea;
+  font-size: 2.5rem;
+  letter-spacing: 2px;
+  animation: flicker 2s infinite;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  left: 0; top: 0;
+  width: 100%; height: 100%;
+  color: #00ffea;
+  background: transparent;
+  overflow: hidden;
+  clip-path: polygon(0 2%, 100% 2%, 100% 5%, 0 5%);
+}
+
+.glitch::before {
+  left: 2px;
+  text-shadow: -2px 0 red;
+  animation: glitchTop 2s infinite linear alternate-reverse;
+}
+
+.glitch::after {
+  left: -2px;
+  text-shadow: -2px 0 blue;
+  animation: glitchBottom 2s infinite linear alternate-reverse;
+}
+
+/* Animaties voor glitch */
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes glitchTop {
+  0% { clip-path: polygon(0 0%, 100% 0%, 100% 10%, 0 10%); transform: translate(0); }
+  50% { clip-path: polygon(0 5%, 100% 5%, 100% 15%, 0 15%); transform: translate(-2px, -2px); }
+  100% { clip-path: polygon(0 0%, 100% 0%, 100% 10%, 0 10%); transform: translate(0); }
+}
+
+@keyframes glitchBottom {
+  0% { clip-path: polygon(0 85%, 100% 85%, 100% 100%, 0 100%); transform: translate(0); }
+  50% { clip-path: polygon(0 90%, 100% 90%, 100% 100%, 0 100%); transform: translate(2px, 2px); }
+  100% { clip-path: polygon(0 85%, 100% 85%, 100% 100%, 0 100%); transform: translate(0); }
+}
+
+/* Menu styling */
+#menu {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 440px;
+    max-width: 90vw;
+    background: rgba(0,0,0,0.85);
+    border: 3px solid #00ffea;
+    padding: 30px 40px;
+    border-radius: 15px;
+    box-shadow: 0 0 25px #00ffe7;
+    transform: translate(-50%, -50%);
     text-align: center;
     user-select: none;
-    color: #ffd700;
-    text-shadow: 0 0 6px #ffbf00;
 }
+
+#menu p {
+    font-size: 10px;
+    margin-bottom: 15px;
+    color: #44ffee;
+}
+
+#menu button, #menu .character-btn {
+    font-family: 'Press Start 2P', cursive;
+    background: #00aaff;
+    color: white;
+    border: none;
+    margin: 10px 8px;
+    padding: 15px 20px;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 0 5px #00aaff;
+    text-transform: uppercase;
+}
+
+#menu button:hover, #menu .character-btn:hover {
+    background: #00ffea;
+    color: #003333;
+    box-shadow: 0 0 15px #00ffea;
+}
+
+.character-btn.selected {
+    background: #00ffea;
+    color: #003333;
+    box-shadow: 0 0 20px #00ffea;
+}
+
+#menu h1 {
+    margin-bottom: 25px;
+}
+
+/* Health bars */
+.health-bar-bg {
+    background-color: #111;
+    border: 2px solid #00ffea;
+    height: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.health-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff00, #009900);
+    transition: width 0.25s ease-out;
+}
+
+/* Combo text */
+.combo {
+    text-align: center;
+    font-size: 10px;
+    color: #00ffea;
+    margin-top: 2px;
+    text-shadow: 0 0 6px #00ffea;
+}
+
+/* Message */
 #message {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background-color: rgba(0,0,0,0.7);
-    padding: 20px 40px;
-    border-radius: 10px;
-    font-size: 24px;
+    background-color: rgba(0,0,0,0.9);
+    padding: 30px 60px;
+    border-radius: 15px;
+    font-size: 22px;
     font-weight: bold;
+    color: #00ffea;
+    text-shadow: 0 0 10px #00ffea;
     user-select: none;
 }
+
+/* Canvas background */
+canvas#gameCanvas {
+    background: linear-gradient(to top, #3a3a3a 0%, #0f0f0f 100%);
+    display: block;
+    margin: 0 auto;
+    border: 2px solid #00ffea;
+    border-radius: 12px;
+    box-shadow: 0 0 20px #00ffea;
+}
+
+/* Player UI containers */
+#ui {
+    position: absolute;
+    top: 15px;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+.player-ui {
+    width: 200px;
+}
+
+/* Hidden class */
 .hidden {
     display: none;
-}
-#story-mode, #leaderboard {
-    position: absolute;
-    top: 50px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #222;
-    padding: 20px;
-    border-radius: 10px;
-    width: 80%;
-    max-width: 400px;
-    box-shadow: 0 0 15px #000;
-    z-index: 100;
-}
-#story-mode h2, #leaderboard h2 {
-    margin-bottom: 15px;
-}
-#menu {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background-color: #111;
-    padding: 30px 40px;
-    border-radius: 15px;
-    box-shadow: 0 0 25px #00aaff;
-    text-align: center;
-}
-#menu h1 {
-    margin-bottom: 20px;
-    font-size: 2.2rem;
-    color: #00ccff;
-    text-shadow: 0 0 10px #00ccff;
-}
-#menu button {
-    margin: 10px;
-    padding: 10px 20px;
-    font-size: 1rem;
-    background-color: #0077aa;
-    border: none;
-    border-radius: 8px;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-#menu button:hover {
-    background-color: #0099ff;
-}
-.character-btn {
-    background-color: #444;
-    margin: 5px;
-    padding: 8px 15px;
-}
-.character-btn.selected {
-    background-color: #00ccff;
-}
-#leaderboard-list {
-    max-height: 200px;
-    overflow-y: auto;
-    padding-left: 20px;
-}
-#leaderboard-list li {
-    margin: 5px 0;
 }

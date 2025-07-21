@@ -1,5 +1,3 @@
-// Stickman Fighting Game - Basis met uitbreidingen
-
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -20,25 +18,37 @@ let gameState = GAME_STATE.MENU;
 const keysDown = {};
 
 window.addEventListener('keydown', e => {
-    keysDown[e.key] = true;
-    // Prevent scrolling arrows
+    keysDown[e.key.toLowerCase()] = true;
     if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key)) e.preventDefault();
 });
 
 window.addEventListener('keyup', e => {
-    keysDown[e.key] = false;
+    keysDown[e.key.toLowerCase()] = false;
 });
 
-// Player config
+// Assets
+const spriteSources = {
+    stickman1: {
+        idle: 'https://i.imgur.com/F9fOgX6.png', // voorbeeld idle sprite sheet
+        walk: 'https://i.imgur.com/fH6rEJq.png',
+        attack: 'https://i.imgur.com/WezNme5.png',
+        hit: 'https://i.imgur.com/XGpGCV3.png',
+    },
+    stickman2: {
+        idle: 'https://i.imgur.com/yxM2npY.png',
+        walk: 'https://i.imgur.com/O6vZ6x5.png',
+        attack: 'https://i.imgur.com/0QaJ8su.png',
+        hit: 'https://i.imgur.com/MqVK9r7.png',
+    }
+};
+
 const PLAYER_WIDTH = 50;
 const PLAYER_HEIGHT = 90;
-const GRAVITY = 0.8;
 const FLOOR_Y = HEIGHT - 100;
+const GRAVITY = 0.8;
 const ATTACK_DURATION = 15;
-const POWERUP_SIZE = 40;
-const MAX_HEALTH = 100;
+const MAX_HEALTH = 250;
 
-// UI Elements
 const player1HealthBar = document.getElementById('player1-health');
 const player2HealthBar = document.getElementById('player2-health');
 const player1ComboText = document.getElementById('player1-combo');
@@ -63,24 +73,39 @@ const characterButtons = document.querySelectorAll('.character-btn');
 let selectedCharacterP1 = 'stickman1';
 let selectedCharacterP2 = 'stickman2';
 
-// Arena backgrounds (simple colored rect with text)
-const arenaColors = ['#2a2a2a', '#3a2b1a'];
-const arenaNames = ['Arena 1', 'Arena 2'];
+// Sprite class
+class Sprite {
+    constructor(imageSrc, frameCount, frameWidth, frameHeight, frameSpeed = 8) {
+        this.image = new Image();
+        this.image.src = imageSrc;
+        this.frameCount = frameCount;
+        this.frameWidth = frameWidth;
+        this.frameHeight = frameHeight;
+        this.frameSpeed = frameSpeed;
+        this.currentFrame = 0;
+        this.tickCount = 0;
+    }
+    update() {
+        this.tickCount++;
+        if(this.tickCount > this.frameSpeed){
+            this.tickCount = 0;
+            this.currentFrame = (this.currentFrame + 1) % this.frameCount;
+        }
+    }
+    draw(ctx, x, y, scale=1, flip=false){
+        ctx.save();
+        if(flip){
+            ctx.translate(x + this.frameWidth*scale, y);
+            ctx.scale(-1,1);
+            ctx.drawImage(this.image, this.currentFrame * this.frameWidth, 0, this.frameWidth, this.frameHeight, 0, 0, this.frameWidth*scale, this.frameHeight*scale);
+        } else {
+            ctx.drawImage(this.image, this.currentFrame * this.frameWidth, 0, this.frameWidth, this.frameHeight, x, y, this.frameWidth*scale, this.frameHeight*scale);
+        }
+        ctx.restore();
+    }
+}
 
-// Players and powerups
-let players = [];
-let powerups = [];
-
-let currentArena = 0;
-let winner = null;
-
-// Combo system timing
-const COMBO_RESET_TIME = 120; // 2 seconds at 60fps
-
-// Leaderboard localStorage key
-const LEADERBOARD_KEY = 'stickman_fighting_leaderboard';
-
-// Player class
+// Player class met animaties
 class Player {
     constructor(id, x, color, controls, character='stickman1') {
         this.id = id;
@@ -97,30 +122,43 @@ class Player {
         this.attackTimer = 0;
         this.combo = 0;
         this.comboTimer = 0;
-        this.facing = id === 1 ? 1 : -1; // Player 1 faces right, player 2 faces left
+        this.facing = id === 1 ? 1 : -1;
         this.controls = controls;
         this.character = character;
         this.strengthBoost = 0;
         this.speedBoost = 0;
+
+        // Animaties laden
+        this.sprites = {
+            idle: new Sprite(spriteSources[character].idle, 4, 64, 64, 10),
+            walk: new Sprite(spriteSources[character].walk, 6, 64, 64, 8),
+            attack: new Sprite(spriteSources[character].attack, 4, 64, 64, 6),
+            hit: new Sprite(spriteSources[character].hit, 2, 64, 64, 12),
+        };
+        this.currentAnimation = 'idle';
     }
 
     update() {
-        // Movement
+        // Beweging
         if (keysDown[this.controls.left]) {
             this.vx = -5 - this.speedBoost;
             this.facing = -1;
+            if(!this.isAttacking) this.currentAnimation = 'walk';
         } else if (keysDown[this.controls.right]) {
             this.vx = 5 + this.speedBoost;
             this.facing = 1;
+            if(!this.isAttacking) this.currentAnimation = 'walk';
         } else {
             this.vx = 0;
+            if(!this.isAttacking) this.currentAnimation = 'idle';
         }
+
         if (keysDown[this.controls.jump] && this.isOnGround) {
             this.vy = -15;
             this.isOnGround = false;
+            playSound('jump');
         }
 
-        // Attack
         if (keysDown[this.controls.attack] && !this.isAttacking) {
             this.attack();
         }
@@ -128,17 +166,16 @@ class Player {
         this.x += this.vx;
         this.y += this.vy;
 
-        // Gravity
         if (!this.isOnGround) {
             this.vy += GRAVITY;
         }
+
         if (this.y > FLOOR_Y - this.height) {
             this.y = FLOOR_Y - this.height;
             this.vy = 0;
             this.isOnGround = true;
         }
 
-        // Boundaries
         if (this.x < 0) this.x = 0;
         if (this.x + this.width > WIDTH) this.x = WIDTH - this.width;
 
@@ -147,6 +184,7 @@ class Player {
             this.attackTimer--;
             if (this.attackTimer <= 0) {
                 this.isAttacking = false;
+                this.currentAnimation = 'idle';
             }
         }
 
@@ -156,388 +194,186 @@ class Player {
         } else {
             this.combo = 0;
         }
+
+        // Update animatie
+        this.sprites[this.currentAnimation].update();
     }
 
     attack() {
         this.isAttacking = true;
         this.attackTimer = ATTACK_DURATION;
+        this.currentAnimation = 'attack';
+        playSound('attack');
     }
 
     takeDamage(amount) {
         this.health -= amount;
         if (this.health < 0) this.health = 0;
 
-        // Increase combo count
         this.combo++;
-        this.comboTimer = COMBO_RESET_TIME;
+        this.comboTimer = 120;
+
+        this.currentAnimation = 'hit';
+        setTimeout(() => {
+            if(!this.isAttacking) this.currentAnimation = 'idle';
+        }, 300);
+        playSound('hit');
+        screenShake(8, 100);
     }
 
     draw(ctx) {
-        ctx.save();
-        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
-        ctx.scale(this.facing, 1);
-        ctx.translate(-(this.x + this.width / 2), -(this.y + this.height / 2));
+        this.sprites[this.currentAnimation].draw(ctx, this.x, this.y + (PLAYER_HEIGHT - 64), 1, this.facing === -1);
+    }
+}
 
-        // Draw simple stickman
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 4;
+// Sound effects
+const sounds = {
+    jump: new Audio('https://freesound.org/data/previews/331/331912_3248244-lq.mp3'),
+    attack: new Audio('https://freesound.org/data/previews/20/20137_27194-lq.mp3'),
+    hit: new Audio('https://freesound.org/data/previews/131/131661_2398402-lq.mp3'),
+};
 
-        // Head
-        ctx.beginPath();
-        ctx.arc(this.x + this.width / 2, this.y + 20, 15, 0, 2 * Math.PI);
-        ctx.stroke();
+function playSound(name) {
+    const s = sounds[name];
+    if (!s) return;
+    s.currentTime = 0;
+    s.volume = 0.5;
+    s.play();
+}
 
-        // Body
-        ctx.beginPath();
-        ctx.moveTo(this.x + this.width / 2, this.y + 35);
-        ctx.lineTo(this.x + this.width / 2, this.y + this.height - 20);
-        ctx.stroke();
+// Screen shake
+let shakeDuration = 0;
+let shakeMagnitude = 0;
 
-        // Arms (if attacking show raised arms)
-        ctx.beginPath();
-        if (this.isAttacking) {
-            // Raised arms (attack pose)
-            ctx.moveTo(this.x + this.width / 2, this.y + 50);
-            ctx.lineTo(this.x + this.width / 2 - 30, this.y + 20);
-            ctx.moveTo(this.x + this.width / 2, this.y + 50);
-            ctx.lineTo(this.x + this.width / 2 + 30, this.y + 20);
-        } else {
-            // Normal arms
-            ctx.moveTo(this.x + this.width / 2, this.y + 50);
-            ctx.lineTo(this.x + this.width / 2 - 30, this.y + 80);
-            ctx.moveTo(this.x + this.width / 2, this.y + 50);
-            ctx.lineTo(this.x + this.width / 2 + 30, this.y + 80);
-        }
-        ctx.stroke();
+function screenShake(magnitude, duration) {
+    shakeMagnitude = magnitude;
+    shakeDuration = duration;
+}
 
-        // Legs
-        ctx.beginPath();
-        ctx.moveTo(this.x + this.width / 2, this.y + this.height - 20);
-        ctx.lineTo(this.x + this.width / 2 - 30, this.y + this.height);
-        ctx.moveTo(this.x + this.width / 2, this.y + this.height - 20);
-        ctx.lineTo(this.x + this.width / 2 + 30, this.y + this.height);
-        ctx.stroke();
-
-        ctx.restore();
+function applyScreenShake() {
+    if (shakeDuration > 0) {
+        shakeDuration--;
+        const dx = (Math.random() - 0.5) * shakeMagnitude;
+        const dy = (Math.random() - 0.5) * shakeMagnitude;
+        ctx.setTransform(1, 0, 0, 1, dx, dy);
+    } else {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
     }
 }
 
 // Powerup class
 class Powerup {
-    constructor(type, x, y) {
-        this.type = type; // 'health' or 'strength'
+    constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.size = POWERUP_SIZE;
-        this.duration = 300; // frames on screen
+        this.size = 40;
+        this.type = 'strength';
+        this.duration = 480; // 8 seconden (60fps)
+        this.active = true;
+        this.sprite = new Image();
+        this.sprite.src = 'https://i.imgur.com/j8FQo9X.png'; // voorbeeld powerup sprite
     }
-
     update() {
-        this.duration--;
+        // powerup kan pulseren of animatie hebben
     }
-
     draw(ctx) {
-        ctx.save();
-        if (this.type === 'health') {
-            ctx.fillStyle = '#4caf50';
-            ctx.beginPath();
-            ctx.arc(this.x + this.size / 2, this.y + this.size / 2, this.size / 2, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.fillStyle = 'white';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(this.x + this.size / 2, this.y + this.size / 4);
-            ctx.lineTo(this.x + this.size / 2, this.y + 3 * this.size / 4);
-            ctx.moveTo(this.x + this.size / 4, this.y + this.size / 2);
-            ctx.lineTo(this.x + 3 * this.size / 4, this.y + this.size / 2);
-            ctx.stroke();
-        } else if (this.type === 'strength') {
-            ctx.fillStyle = '#ff5722';
-            ctx.beginPath();
-            ctx.moveTo(this.x + this.size / 2, this.y + 5);
-            ctx.lineTo(this.x + this.size - 5, this.y + this.size - 5);
-            ctx.lineTo(this.x + 5, this.y + this.size - 5);
-            ctx.closePath();
-            ctx.fill();
-            ctx.strokeStyle = 'white';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-        }
-        ctx.restore();
+        ctx.drawImage(this.sprite, this.x, this.y, this.size, this.size);
     }
 }
 
-// Game object
-const Game = {
-    players: [],
-    powerups: [],
-    arenaIndex: 0,
-    arenaName: '',
-    winner: null,
-    storyStage: 0,
-    storyActive: false,
-
-    init() {
-        this.arenaIndex = 0;
-        this.arenaName = arenaNames[this.arenaIndex];
-        this.winner = null;
-        this.storyStage = 0;
-        this.storyActive = false;
-        this.powerups = [];
-
-        // Setup players
+class GameClass {
+    constructor() {
         this.players = [
-            new Player(1, 100, 'cyan', {left:'a', right:'d', jump:'w', attack:'s'}, selectedCharacterP1),
-            new Player(2, WIDTH - 150, 'magenta', {left:'ArrowLeft', right:'ArrowRight', jump:'ArrowUp', attack:'ArrowDown'}, selectedCharacterP2)
+            new Player(1, 150, 'cyan', { left: 'a', right: 'd', jump: 'w', attack: 's' }, selectedCharacterP1),
+            new Player(2, WIDTH - 200, 'orange', { left: 'arrowleft', right: 'arrowright', jump: 'arrowup', attack: 'arrowdown' }, selectedCharacterP2)
         ];
-
-        updateUI();
-        messageDiv.classList.add('hidden');
-        menuDiv.style.display = 'none';
-        storyDiv.classList.add('hidden');
-        leaderboardDiv.classList.add('hidden');
-    },
+        this.powerups = [];
+        this.powerupSpawnTimer = 0;
+    }
 
     update() {
-        if (gameState !== GAME_STATE.PLAYING) return;
-
         this.players.forEach(p => p.update());
 
+        // Check attack hit
         this.checkAttacks();
 
-        this.spawnPowerups();
+        // Spawn powerup max 1 tegelijk elke 15 seconden
+        if (this.powerups.length === 0) {
+            this.powerupSpawnTimer--;
+            if (this.powerupSpawnTimer <= 0) {
+                const x = Math.random() * (WIDTH - 40);
+                const y = FLOOR_Y - 40;
+                this.powerups.push(new Powerup(x, y));
+                this.powerupSpawnTimer = 900; // 15 sec
+            }
+        } else {
+            // powerup timeout
+            this.powerups[0].duration--;
+            if (this.powerups[0].duration <= 0) {
+                this.powerups.shift();
+            }
+        }
 
-        this.updatePowerups();
+        // Powerup collision
+        this.powerups.forEach((p, i) => {
+            this.players.forEach(player => {
+                if(this.collides(player, p) && p.active){
+                    p.active = false;
+                    this.powerups.splice(i,1);
+                    player.strengthBoost = 5; // extra 5 damage voor powerup
+                    playSound('attack');
+                }
+            });
+        });
 
-        this.checkPowerupPickups();
+    }
 
-        this.checkGameOver();
-
-        updateUI();
-    },
-
-    draw() {
-        // Draw arena background
-        ctx.fillStyle = arenaColors[this.arenaIndex];
-        ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-        // Draw arena name top-left
-        ctx.fillStyle = 'white';
-        ctx.font = '24px Arial';
-        ctx.fillText(this.arenaName, 10, 30);
-
-        // Draw floor
-        ctx.fillStyle = '#654321';
-        ctx.fillRect(0, FLOOR_Y, WIDTH, HEIGHT - FLOOR_Y);
-
-        // Draw powerups
-        this.powerups.forEach(pu => pu.draw(ctx));
-
-        // Draw players
-        this.players.forEach(p => p.draw(ctx));
-    },
+    collides(p, powerup) {
+        return !(p.x > powerup.x + powerup.size || p.x + p.width < powerup.x || p.y > powerup.y + powerup.size || p.y + p.height < powerup.y);
+    }
 
     checkAttacks() {
         const p1 = this.players[0];
         const p2 = this.players[1];
-
-        // Check if p1 attacks p2
-        if (p1.isAttacking && this.collides(p1, p2)) {
-            const damage = 5 + p1.strengthBoost;
-            p2.takeDamage(damage);
+        if (p1.isAttacking && this.inAttackRange(p1, p2)) {
+            p2.takeDamage(8 + p1.strengthBoost);
         }
-        // Check if p2 attacks p1
-        if (p2.isAttacking && this.collides(p2, p1)) {
-            const damage = 5 + p2.strengthBoost;
-            p1.takeDamage(damage);
+        if (p2.isAttacking && this.inAttackRange(p2, p1)) {
+            p1.takeDamage(8 + p2.strengthBoost);
         }
-    },
-
-    collides(p1, p2) {
-        // Simple rectangle collision for attack range (front side)
-        // Attack hitbox: a rectangle in front of attacker
-        let attackRange = 40;
-        let attackBox = {
-            x: p1.facing === 1 ? p1.x + p1.width : p1.x - attackRange,
-            y: p1.y + 20,
-            width: attackRange,
-            height: p1.height - 40
-        };
-        let targetBox = {
-            x: p2.x,
-            y: p2.y,
-            width: p2.width,
-            height: p2.height
-        };
-
-        return !(
-            attackBox.x > targetBox.x + targetBox.width ||
-            attackBox.x + attackBox.width < targetBox.x ||
-            attackBox.y > targetBox.y + targetBox.height ||
-            attackBox.y + attackBox.height < targetBox.y
-        );
-    },
-
-    spawnPowerups() {
-        if (this.powerups.length >= 2) return;
-
-        if (Math.random() < 0.005) {
-            // Spawn random powerup at random position on floor
-            const types = ['health', 'strength'];
-            const type = types[Math.floor(Math.random() * types.length)];
-            const x = Math.random() * (WIDTH - POWERUP_SIZE);
-            const y = FLOOR_Y - POWERUP_SIZE;
-            this.powerups.push(new Powerup(type, x, y));
-        }
-    },
-
-    updatePowerups() {
-        for (let i = this.powerups.length - 1; i >= 0; i--) {
-            this.powerups[i].update();
-            if (this.powerups[i].duration <= 0) {
-                this.powerups.splice(i, 1);
-            }
-        }
-    },
-
-    checkPowerupPickups() {
-        for (let i = this.powerups.length - 1; i >= 0; i--) {
-            const pu = this.powerups[i];
-            this.players.forEach(p => {
-                if (this.collideRects(p, pu)) {
-                    this.applyPowerup(p, pu.type);
-                    this.powerups.splice(i, 1);
-                }
-            });
-        }
-    },
-
-    collideRects(a, b) {
-        return !(
-            a.x > b.x + b.size ||
-            a.x + a.width < b.x ||
-            a.y > b.y + b.size ||
-            a.y + a.height < b.y
-        );
-    },
-
-    applyPowerup(player, type) {
-        if (type === 'health') {
-            player.health += 20;
-            if (player.health > MAX_HEALTH) player.health = MAX_HEALTH;
-        } else if (type === 'strength') {
-            player.strengthBoost = 3;
-            // Reset after 5 seconds
-            setTimeout(() => {
-                player.strengthBoost = 0;
-            }, 5000);
-        }
-    },
-
-    checkGameOver() {
-        this.players.forEach(p => {
-            if (p.health <= 0) {
-                winner = this.players.find(pl => pl !== p);
-                gameState = GAME_STATE.GAMEOVER;
-                showMessage(`${winner.id === 1 ? 'Speler 1' : 'Speler 2'} wint!`);
-                this.addLeaderboardEntry(winner.id);
-            }
-        });
-    },
-
-    addLeaderboardEntry(playerId) {
-        let leaderboard = JSON.parse(localStorage.getItem(LEADERBOARD_KEY)) || [];
-        leaderboard.push({player: playerId, date: new Date().toISOString()});
-        localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(leaderboard));
-    },
-
-    loadLeaderboard() {
-        return JSON.parse(localStorage.getItem(LEADERBOARD_KEY)) || [];
-    },
-
-    nextArena() {
-        this.arenaIndex = (this.arenaIndex + 1) % arenaColors.length;
-        this.arenaName = arenaNames[this.arenaIndex];
-    },
-
-    startStory() {
-        this.storyActive = true;
-        this.storyStage = 0;
-        gameState = GAME_STATE.STORY;
-        storyDiv.classList.remove('hidden');
-        menuDiv.style.display = 'none';
-        messageDiv.classList.add('hidden');
-        leaderboardDiv.classList.add('hidden');
-        this.showStoryText();
-    },
-
-    showStoryText() {
-        const texts = [
-            "Welkom bij de Stickman Story Mode!",
-            "Je vecht tegen steeds sterkere tegenstanders.",
-            "Win om door te gaan naar het volgende level.",
-            "Succes!"
-        ];
-        if(this.storyStage < texts.length) {
-            storyTextP.textContent = texts[this.storyStage];
-        } else {
-            // Start level 1 fight
-            storyDiv.classList.add('hidden');
-            gameState = GAME_STATE.PLAYING;
-            this.init();
-        }
-    },
-
-    advanceStory() {
-        this.storyStage++;
-        this.showStoryText();
-    },
-
-    exitStory() {
-        this.storyActive = false;
-        storyDiv.classList.add('hidden');
-        menuDiv.style.display = 'block';
-        gameState = GAME_STATE.MENU;
-    },
-
-    showLeaderboard() {
-        leaderboardDiv.classList.remove('hidden');
-        menuDiv.style.display = 'none';
-        messageDiv.classList.add('hidden');
-        storyDiv.classList.add('hidden');
-
-        // Load leaderboard and display
-        let leaderboard = this.loadLeaderboard();
-        leaderboardList.innerHTML = '';
-        if(leaderboard.length === 0) {
-            leaderboardList.innerHTML = '<li>Geen scores gevonden.</li>';
-            return;
-        }
-        // Count wins per player
-        let countWins = {1:0, 2:0};
-        leaderboard.forEach(e => {
-            if(e.player === 1) countWins[1]++;
-            else if(e.player === 2) countWins[2]++;
-        });
-
-        leaderboardList.innerHTML = `
-            <li>Speler 1 wins: ${countWins[1]}</li>
-            <li>Speler 2 wins: ${countWins[2]}</li>
-            <li>Totaal gespeelde wedstrijden: ${leaderboard.length}</li>
-        `;
-    },
-
-    clearLeaderboard() {
-        localStorage.removeItem(LEADERBOARD_KEY);
-        this.showLeaderboard();
     }
-};
 
-// Update health bars and combo UI
+    inAttackRange(attacker, target) {
+        if (attacker.facing === 1) {
+            return attacker.x + attacker.width + 15 >= target.x &&
+                   attacker.x < target.x &&
+                   Math.abs(attacker.y - target.y) < 40;
+        } else {
+            return attacker.x - 15 <= target.x + target.width &&
+                   attacker.x > target.x &&
+                   Math.abs(attacker.y - target.y) < 40;
+        }
+    }
+
+    draw() {
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+        // Draw background (parallax kan later)
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, FLOOR_Y, WIDTH, HEIGHT - FLOOR_Y);
+
+        this.powerups.forEach(p => p.draw(ctx));
+        this.players.forEach(p => p.draw(ctx));
+
+        applyScreenShake();
+    }
+}
+
+let Game = new GameClass();
+
 function updateUI() {
-    if(!Game.players.length) return;
-    player1HealthBar.style.width = Game.players[0].health + '%';
-    player2HealthBar.style.width = Game.players[1].health + '%';
+    player1HealthBar.style.width = (Game.players[0].health / MAX_HEALTH) * 100 + '%';
+    player2HealthBar.style.width = (Game.players[1].health / MAX_HEALTH) * 100 + '%';
 
     player1ComboText.textContent = `Combo: ${Game.players[0].combo}`;
     player2ComboText.textContent = `Combo: ${Game.players[1].combo}`;
@@ -552,59 +388,40 @@ function hideMessage() {
     messageDiv.classList.add('hidden');
 }
 
-// Game loop
-function loop() {
-    if (gameState === GAME_STATE.PLAYING) {
-        Game.update();
-        Game.draw();
-    }
-    requestAnimationFrame(loop);
+function resetGame() {
+    Game = new GameClass();
 }
 
-// Button event listeners
 startGameBtn.addEventListener('click', () => {
-    Game.init();
+    resetGame();
     gameState = GAME_STATE.PLAYING;
-});
-
-storyModeBtn.addEventListener('click', () => {
-    Game.startStory();
-});
-
-startStoryBtn.addEventListener('click', () => {
-    Game.advanceStory();
-});
-
-exitStoryBtn.addEventListener('click', () => {
-    Game.exitStory();
-});
-
-leaderboardBtn.addEventListener('click', () => {
-    Game.showLeaderboard();
-});
-
-clearLeaderboardBtn.addEventListener('click', () => {
-    Game.clearLeaderboard();
-});
-
-closeLeaderboardBtn.addEventListener('click', () => {
-    leaderboardDiv.classList.add('hidden');
-    menuDiv.style.display = 'block';
+    menuDiv.style.display = 'none';
+    const music = document.getElementById('bg-music');
+    music.volume = 0.3;
+    music.play();
 });
 
 characterButtons.forEach(btn => {
     btn.addEventListener('click', () => {
         characterButtons.forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
-        if (!document.getElementById('menu').contains(btn)) return;
-        // For simplicity: first selected = player 1, second = player 2
-        // but here we toggle selection for player 1 only
         selectedCharacterP1 = btn.dataset.character;
     });
 });
 
-// Initialize with Player 1's default selection
-document.querySelector('.character-btn[data-character="stickman1"]').classList.add('selected');
+function loop() {
+    if(gameState === GAME_STATE.PLAYING){
+        Game.update();
+        Game.draw();
+        updateUI();
 
-// Start loop
+        if(Game.players[0].health <= 0 || Game.players[1].health <= 0){
+            showMessage(Game.players[0].health <= 0 ? 'Speler 2 wint!' : 'Speler 1 wint!');
+            gameState = GAME_STATE.MENU;
+            menuDiv.style.display = 'block';
+        }
+    }
+    requestAnimationFrame(loop);
+}
+
 loop();

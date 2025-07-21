@@ -1,74 +1,19 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Stickman Fighting Game</title>
-
-<!-- Pixel font -->
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
-
-<link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stickman Fight!</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div id="game-container">
-    <canvas id="gameCanvas" width="960" height="540"></canvas>
-    
-    <div id="ui">
-        <div id="player1-ui" class="player-ui">
-            <div class="health-bar-bg">
-                <div id="player1-health" class="health-bar"></div>
-            </div>
-            <div id="player1-combo" class="combo">Combo: 0</div>
-        </div>
-        <div id="player2-ui" class="player-ui">
-            <div class="health-bar-bg">
-                <div id="player2-health" class="health-bar"></div>
-            </div>
-            <div id="player2-combo" class="combo">Combo: 0</div>
-        </div>
-    </div>
-    
-    <div id="message" class="hidden"></div>
-    
-    <div id="story-mode" class="hidden">
-        <h2>Story Mode</h2>
-        <button id="start-story-btn">Start Story Mode</button>
-        <button id="exit-story-btn" class="hidden">Exit Story Mode</button>
-        <p id="story-text"></p>
-    </div>
-    
-    <div id="leaderboard" class="hidden">
-        <h2>Leaderboards</h2>
-        <ol id="leaderboard-list"></ol>
-        <button id="clear-leaderboard-btn">Clear Leaderboard</button>
-        <button id="close-leaderboard-btn">Close</button>
-    </div>
-    
-    <div id="menu" class="glitch-menu">
-        <h1 class="glitch" data-text="Stickman Fighting Game">Stickman Fighting Game</h1>
-        <div id="character-selection">
-            <p>Kies je karakter:</p>
-            <button class="character-btn" data-character="stickman1">Stickman 1</button>
-            <button class="character-btn" data-character="stickman2">Stickman 2</button>
-        </div>
-        <button id="start-game-btn">Start Game</button>
-        <button id="story-mode-btn">Story Mode</button>
-        <button id="leaderboard-btn">Leaderboards</button>
-    </div>
-</div>
-
-<!-- Loopende chiptune soundtrack -->
-<audio id="bg-music" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_26ed29071f.mp3?filename=8-bit-loop-5619.mp3" loop></audio>
-
-<script src="game.js"></script>
-<script>
-// Muziek autoplay na interactie (browserpolicy)
-document.getElementById('start-game-btn').addEventListener('click', () => {
-    const music = document.getElementById('bg-music');
-    music.volume = 0.3;
-    music.play();
-});
-</script>
+  <div id="main-menu">
+    <h1>🔥 STICKMAN FIGHT 🔥</h1>
+    <button onclick="startGame()">Start Game</button>
+    <p>Press A/D to move, SPACE to attack</p>
+  </div>
+  <canvas id="gameCanvas" width="960" height="540"></canvas>
+  <audio id="bgm" src="soundtrack.mp3" loop autoplay></audio>
+  <script src="game.js"></script>
 </body>
 </html>

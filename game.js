@@ -1,70 +1,8 @@
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-const menu = document.getElementById("main-menu");
-const bgm = document.getElementById("bgm");
-let keys = {};
 
-const spriteSources = {
-  stickman1: {
-    idle: 'data:image/png;base64,...', // Base64 sprites to be inserted here
-    walk: 'data:image/png;base64,...',
-    attack: 'data:image/png;base64,...',
-    hit: 'data:image/png;base64,...',
-  }
-};
-
-class Player {
-  constructor(x, controls) {
-    this.x = x;
-    this.y = 400;
-    this.health = 100;
-    this.frame = 0;
-    this.action = "idle";
-    this.flip = controls.flip;
-    this.controls = controls;
-  }
-
-  update() {
-    if (keys[this.controls.left]) this.x -= 3;
-    if (keys[this.controls.right]) this.x += 3;
-    if (keys[this.controls.attack]) this.attack();
-    this.frame = (this.frame + 1) % 4;
-  }
-
-  attack() {
-    this.action = "attack";
-    setTimeout(() => this.action = "idle", 300);
-  }
-
-  draw() {
-    const img = new Image();
-    img.src = spriteSources.stickman1[this.action];
-    img.onload = () => {
-      ctx.save();
-      if (this.flip) {
-        ctx.scale(-1, 1);
-        ctx.drawImage(img, this.frame * 64, 0, 64, 64, -this.x - 64, this.y, 64, 64);
-      } else {
-        ctx.drawImage(img, this.frame * 64, 0, 64, 64, this.x, this.y, 64, 64);
-      }
-      ctx.restore();
-    }
-  }
-}
-
-let players = [
-  new Player(200, { left: "a", right: "d", attack: " " }),
-  new Player(700, { left: "ArrowLeft", right: "ArrowRight", attack: "Enter", flip: true })
-];
-
-function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  players.forEach(p => {
-    p.update();
-    p.draw();
-  });
-  requestAnimationFrame(gameLoop);
-}
+let canvas = document.getElementById("gameCanvas");
+let ctx = canvas.getContext("2d");
+let menu = document.getElementById("menu");
+let bgMusic = document.getElementById("bgMusic");
 
 function startGame() {
   menu.style.display = "none";
@@ -72,5 +10,73 @@ function startGame() {
   gameLoop();
 }
 
-document.addEventListener("keydown", e => keys[e.key] = true);
-document.addEventListener("keyup", e => keys[e.key] = false);
+class Stickman {
+  constructor(x, color, controls) {
+    this.x = x;
+    this.y = 300;
+    this.width = 50;
+    this.height = 100;
+    this.color = color;
+    this.health = 100;
+    this.controls = controls;
+    this.velocity = 0;
+    this.isAttacking = false;
+  }
+
+  draw() {
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y - this.height, this.width, this.height);
+    if (this.isAttacking) {
+      ctx.fillStyle = "red";
+      ctx.fillRect(this.x + (this.width * (this.velocity >= 0 ? 1 : -0.5)), this.y - 50, 10, 10);
+    }
+  }
+
+  update(keys) {
+    if (keys[this.controls.left]) this.x -= 3;
+    if (keys[this.controls.right]) this.x += 3;
+    this.isAttacking = keys[this.controls.attack];
+  }
+
+  takeDamage(amount) {
+    this.health -= amount;
+    if (this.health < 0) this.health = 0;
+  }
+}
+
+const keys = {};
+document.addEventListener("keydown", (e) => keys[e.key] = true);
+document.addEventListener("keyup", (e) => keys[e.key] = false);
+
+const player1 = new Stickman(100, "cyan", { left: "a", right: "d", attack: "w" });
+const player2 = new Stickman(600, "magenta", { left: "ArrowLeft", right: "ArrowRight", attack: "ArrowUp" });
+
+function drawHealthBars() {
+  ctx.fillStyle = "cyan";
+  ctx.fillRect(20, 20, player1.health * 2, 20);
+  ctx.fillStyle = "magenta";
+  ctx.fillRect(560, 20, player2.health * 2, 20);
+}
+
+function detectHit(p1, p2) {
+  if (p1.isAttacking && Math.abs(p1.x - p2.x) < 60) {
+    p2.takeDamage(1);
+  }
+}
+
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  player1.update(keys);
+  player2.update(keys);
+
+  detectHit(player1, player2);
+  detectHit(player2, player1);
+
+  player1.draw();
+  player2.draw();
+
+  drawHealthBars();
+
+  requestAnimationFrame(gameLoop);
+}
